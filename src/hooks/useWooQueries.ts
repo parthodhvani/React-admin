@@ -9,6 +9,9 @@ import { ProductsService, type ProductQuery } from "../services/products.service
 import { ReportsService } from "../services/reports.service";
 
 const enabled = wooEnv.isConfigured;
+interface QueryOptions {
+  enabled?: boolean;
+}
 
 export function useDashboardOverviewQuery() {
   return useQuery({
@@ -46,34 +49,34 @@ export function useTopProductsQuery() {
   });
 }
 
-export function useOrdersQuery(params: OrderQuery = {}) {
+export function useOrdersQuery(params: OrderQuery = {}, options: QueryOptions = {}) {
   return useQuery({
     queryKey: ["orders", params],
     queryFn: () => OrdersService.list(params),
-    enabled,
+    enabled: enabled && (options.enabled ?? true),
     staleTime: 1000 * 30,
   });
 }
 
-export function useProductsQuery(params: ProductQuery = {}) {
+export function useProductsQuery(params: ProductQuery = {}, options: QueryOptions = {}) {
   return useQuery({
     queryKey: ["products", params],
     queryFn: () => ProductsService.list(params),
-    enabled,
+    enabled: enabled && (options.enabled ?? true),
     staleTime: 1000 * 30,
   });
 }
 
-export function useCustomersQuery(params: CustomerQuery = {}) {
+export function useCustomersQuery(params: CustomerQuery = {}, options: QueryOptions = {}) {
   return useQuery({
     queryKey: ["customers", params],
     queryFn: () => CustomersService.list(params),
-    enabled,
+    enabled: enabled && (options.enabled ?? true),
     staleTime: 1000 * 30,
   });
 }
 
-export function useAuxiliaryCollectionsQuery() {
+export function useAuxiliaryCollectionsQuery(options: QueryOptions = {}) {
   return useQuery({
     queryKey: ["aux-collections"],
     queryFn: async () => {
@@ -87,7 +90,32 @@ export function useAuxiliaryCollectionsQuery() {
 
       return { categories, coupons, reviews, tags, attributes };
     },
-    enabled,
+    enabled: enabled && (options.enabled ?? true),
+    staleTime: 1000 * 60,
+  });
+}
+
+export function useCategoriesQuery(options: QueryOptions = {}) {
+  return useQuery({
+    queryKey: ["categories"],
+    queryFn: () => CategoriesService.list(),
+    enabled: enabled && (options.enabled ?? true),
+    staleTime: 1000 * 60,
+  });
+}
+
+export function useOperationsCollectionsQuery(options: QueryOptions = {}) {
+  return useQuery({
+    queryKey: ["operations-collections"],
+    queryFn: async () => {
+      const [categories, coupons] = await Promise.all([
+        CategoriesService.list(),
+        CouponsService.list(),
+      ]);
+
+      return { categories, coupons };
+    },
+    enabled: enabled && (options.enabled ?? true),
     staleTime: 1000 * 60,
   });
 }

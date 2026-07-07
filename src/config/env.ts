@@ -2,6 +2,7 @@ interface WooEnv {
   baseUrl: string;
   consumerKey: string;
   consumerSecret: string;
+  timeoutMs: number;
   isConfigured: boolean;
 }
 
@@ -20,10 +21,13 @@ const rawBaseUrl = (import.meta.env.VITE_WC_BASE_URL as string | undefined) ?? "
 const baseUrl = normalizeWooBaseUrl(rawBaseUrl);
 const consumerKey = (import.meta.env.VITE_WC_CONSUMER_KEY as string | undefined)?.trim() ?? "";
 const consumerSecret = (import.meta.env.VITE_WC_CONSUMER_SECRET as string | undefined)?.trim() ?? "";
+const timeoutRaw = Number(import.meta.env.VITE_WC_TIMEOUT_MS ?? 45000);
+const timeoutMs = Number.isFinite(timeoutRaw) && timeoutRaw > 0 ? timeoutRaw : 45000;
 
 export const wooEnv: WooEnv = {
   baseUrl,
   consumerKey,
   consumerSecret,
+  timeoutMs,
   isConfigured: Boolean(baseUrl && consumerKey && consumerSecret),
 };

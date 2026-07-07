@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { FiArrowUpRight, FiCommand, FiFileText, FiSearch, FiZap } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { useAuxiliaryCollectionsQuery, useCustomersQuery, useOrdersQuery, useProductsQuery } from "../../hooks/useWooQueries";
+import { useCategoriesQuery, useCustomersQuery, useOrdersQuery, useProductsQuery } from "../../hooks/useWooQueries";
 import { useDashboardStore } from "../../store/useDashboardStore";
 
 type CommandItem = {
@@ -24,10 +24,10 @@ export function CommandPalette() {
   const openNotifications = useDashboardStore((state) => state.openNotifications);
   const [query, setQuery] = useState("");
 
-  const orders = useOrdersQuery({ per_page: 10, search: query || undefined });
-  const products = useProductsQuery({ per_page: 10, search: query || undefined });
-  const customers = useCustomersQuery({ per_page: 10, search: query || undefined });
-  const aux = useAuxiliaryCollectionsQuery();
+  const orders = useOrdersQuery({ per_page: 10, search: query || undefined }, { enabled: isOpen });
+  const products = useProductsQuery({ per_page: 10, search: query || undefined }, { enabled: isOpen });
+  const customers = useCustomersQuery({ per_page: 10, search: query || undefined }, { enabled: isOpen });
+  const categories = useCategoriesQuery({ enabled: isOpen });
 
   const commands = useMemo<CommandItem[]>(() => {
     const navigation: CommandItem[] = [
@@ -61,7 +61,7 @@ export function CommandPalette() {
         category: "Customers" as const,
         action: () => navigate("/customers"),
       })),
-      ...(aux.data?.categories.items ?? []).slice(0, 8).map((item) => ({
+      ...(categories.data?.items ?? []).slice(0, 8).map((item) => ({
         id: `category-${item.id}`,
         label: item.name,
         subtitle: `${item.count ?? 0} products`,
@@ -71,7 +71,7 @@ export function CommandPalette() {
     ];
 
     return [...navigation, ...dynamic];
-  }, [aux.data?.categories.items, customers.data?.items, navigate, openNotifications, openQuickActions, orders.data?.items, products.data?.items]);
+  }, [categories.data?.items, customers.data?.items, navigate, openNotifications, openQuickActions, orders.data?.items, products.data?.items]);
 
   const results = useMemo(() => {
     const keyword = query.trim().toLowerCase();

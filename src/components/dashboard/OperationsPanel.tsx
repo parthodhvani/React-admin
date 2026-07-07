@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
-  useAuxiliaryCollectionsQuery,
+  useOperationsCollectionsQuery,
   useOrdersQuery,
   useProductsQuery,
 } from "../../hooks/useWooQueries";
@@ -18,7 +18,7 @@ export function OperationsPanel() {
   const notifications = useDashboardStore((state) => state.notifications);
   const ordersQuery = useOrdersQuery({ per_page: 12, orderby: "date", order: "desc" });
   const productsQuery = useProductsQuery({ per_page: 12, orderby: "date", order: "desc" });
-  const auxQuery = useAuxiliaryCollectionsQuery();
+  const auxQuery = useOperationsCollectionsQuery();
 
   const loading = ordersQuery.isLoading || productsQuery.isLoading || auxQuery.isLoading;
   const error =

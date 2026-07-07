@@ -31,10 +31,11 @@ export function Topbar() {
   const unreadCount = useDashboardStore((state) => state.notifications.filter((item) => item.unread).length);
   const theme = useDashboardStore((state) => state.theme);
   const toggleTheme = useDashboardStore((state) => state.toggleTheme);
+  const shouldFetchSuggestions = search.trim().length >= 2;
 
-  const customersQuery = useCustomersQuery({ search, per_page: 5 });
-  const productsQuery = useProductsQuery({ search, per_page: 5 });
-  const ordersQuery = useOrdersQuery({ search, per_page: 5 });
+  const customersQuery = useCustomersQuery({ search, per_page: 5 }, { enabled: shouldFetchSuggestions });
+  const productsQuery = useProductsQuery({ search, per_page: 5 }, { enabled: shouldFetchSuggestions });
+  const ordersQuery = useOrdersQuery({ search, per_page: 5 }, { enabled: shouldFetchSuggestions });
 
   const suggestions = useMemo(() => {
     if (!search.trim()) return [];
