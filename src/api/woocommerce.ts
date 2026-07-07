@@ -7,9 +7,11 @@ const DEFAULT_RETRIES = 2;
 
 export class WooApiError extends Error {
   status?: number;
-  constructor(message: string, status?: number) {
+  code?: string;
+  constructor(message: string, status?: number, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -20,6 +22,11 @@ const createWooClient = (): AxiosInstance => {
   });
 
   instance.interceptors.request.use((config) => {
+    config.auth = {
+      username: wooEnv.consumerKey,
+      password: wooEnv.consumerSecret,
+    };
+
     config.params = {
       ...(config.params ?? {}),
       consumer_key: wooEnv.consumerKey,
@@ -31,17 +38,22 @@ const createWooClient = (): AxiosInstance => {
 
   instance.interceptors.response.use(
     (response) => response,
-    (error: AxiosError<{ message?: string }>) => {
+    (error: AxiosError<{ message?: string; code?: string }>) => {
       const timeoutMessage =
         error.code === "ECONNABORTED"
           ? `Request timed out after ${DEFAULT_TIMEOUT}ms. Check WooCommerce URL/network reachability or increase VITE_WC_TIMEOUT_MS.`
           : undefined;
+      const permissionMessage =
+        error.response?.status === 401 || error.response?.status === 403
+          ? "WooCommerce denied access. API key user likely lacks Admin/Shop Manager capabilities, or key permissions are not Read/Write."
+          : undefined;
       const message =
         timeoutMessage ||
+        permissionMessage ||
         error.response?.data?.message ||
         error.message ||
         "Unknown WooCommerce API error";
-      throw new WooApiError(message, error.response?.status);
+      throw new WooApiError(message, error.response?.status, error.response?.data?.code);
     },
   );
 

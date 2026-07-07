@@ -30,12 +30,19 @@ export function WooStatePanel({ loading, error, title = "WooCommerce data" }: Wo
   }
 
   if (error) {
+    const permissionHint = error.toLowerCase().includes("denied access") || error.toLowerCase().includes("cannot list resources");
+
     return (
       <div className="glass soft-card rounded-3xl p-6 text-sm text-rose-600">
         <p className="mb-1 flex items-center gap-2 font-semibold">
           <FiAlertTriangle /> Failed to load {title}
         </p>
         <p>{error}</p>
+        {permissionHint && (
+          <p className="mt-2 text-xs text-rose-500">
+            Verify your WooCommerce API key belongs to an Admin/Shop Manager user and has Read or Read/Write permissions.
+          </p>
+        )}
       </div>
     );
   }
