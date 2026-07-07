@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { FormEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { FiEye, FiEyeOff, FiGithub, FiLock, FiMail } from "react-icons/fi";
 import { FaGoogle, FaMicrosoft } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
