@@ -6,9 +6,10 @@ import { LoginPage } from "./pages/auth/LoginPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { CalendarPage } from "./pages/CalendarPage";
 import { DashboardPage } from "./pages/DashboardPage";
-import { ProjectsPage } from "./pages/ProjectsPage";
+import { CustomersPage } from "./pages/commerce/CustomersPage";
+import { OrdersPage } from "./pages/commerce/OrdersPage";
+import { ProductsPage } from "./pages/commerce/ProductsPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { TeamPage } from "./pages/TeamPage";
 
 function App() {
   useThemeSync();
@@ -26,8 +27,9 @@ function App() {
       >
         <Route path="/" element={<DashboardPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route path="/projects" element={<ProjectsPage />} />
-        <Route path="/team" element={<TeamPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/customers" element={<CustomersPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

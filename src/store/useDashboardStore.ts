@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { users as seededUsers } from "../data/mockData";
-import type { User } from "../types";
+
+type ThemeMode = "light" | "dark";
 
 interface Notification {
   id: string;
@@ -16,8 +16,6 @@ interface QuickActionPayload {
   note: string;
 }
 
-type ThemeMode = "light" | "dark";
-
 interface DashboardState {
   sidebarCollapsed: boolean;
   search: string;
@@ -28,7 +26,6 @@ interface DashboardState {
   notifications: Notification[];
   lastActionMessage: string;
   theme: ThemeMode;
-  userRecords: User[];
   toggleSidebar: () => void;
   setSearch: (query: string) => void;
   openCommand: () => void;
@@ -44,39 +41,22 @@ interface DashboardState {
   submitQuickAction: (payload: QuickActionPayload) => void;
   clearActionMessage: () => void;
   toggleTheme: () => void;
-  setTheme: (theme: ThemeMode) => void;
-  importUsers: (users: User[]) => void;
-  resetUsers: () => void;
 }
 
 const seedNotifications: Notification[] = [
   {
     id: "notif-1",
-    title: "Forecast model retrained",
-    message: "Revenue forecast confidence increased by 3.2%.",
-    time: "2m ago",
+    title: "System Ready",
+    message: "WooCommerce sync pipeline initialized.",
+    time: "just now",
     unread: true,
-  },
-  {
-    id: "notif-2",
-    title: "New enterprise lead",
-    message: "Apex Dynamics requested a custom demo.",
-    time: "14m ago",
-    unread: true,
-  },
-  {
-    id: "notif-3",
-    title: "Invoice processed",
-    message: "Invoice #5932 was paid via ACH transfer.",
-    time: "1h ago",
-    unread: false,
   },
 ];
 
 const storedTheme =
   typeof window !== "undefined"
-    ? (localStorage.getItem("nova-theme") as ThemeMode | null)
-    : null;
+    ? ((localStorage.getItem("nova-theme") as ThemeMode | null) ?? "light")
+    : "light";
 
 export const useDashboardStore = create<DashboardState>((set) => ({
   sidebarCollapsed: false,
@@ -84,11 +64,10 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   commandOpen: false,
   notificationsOpen: false,
   quickActionsOpen: false,
-  recentSearches: ["Q2 MRR", "Helios project", "Active enterprise users"],
+  recentSearches: ["orders", "products", "customers"],
   notifications: seedNotifications,
   lastActionMessage: "",
-  theme: storedTheme ?? "light",
-  userRecords: seededUsers,
+  theme: storedTheme,
 
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   setSearch: (search) => set({ search }),
@@ -135,7 +114,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           unread: true,
         },
         ...state.notifications,
-      ].slice(0, 20),
+      ].slice(0, 30),
     })),
 
   clearActionMessage: () => set({ lastActionMessage: "" }),
@@ -146,16 +125,4 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       localStorage.setItem("nova-theme", next);
       return { theme: next };
     }),
-
-  setTheme: (theme) => {
-    localStorage.setItem("nova-theme", theme);
-    set({ theme });
-  },
-
-  importUsers: (users) => {
-    if (!users.length) return;
-    set({ userRecords: users.slice(0, 500), lastActionMessage: `Imported ${users.length} user records.` });
-  },
-
-  resetUsers: () => set({ userRecords: seededUsers, lastActionMessage: "Reset users to seeded dataset." }),
 }));

@@ -14,15 +14,28 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { analyticsSeries } from "../../data/mockData";
-
-const trafficData = [
-  { name: "Desktop", value: 54, color: "#3b82f6" },
-  { name: "Mobile", value: 33, color: "#8b5cf6" },
-  { name: "Tablet", value: 13, color: "#06b6d4" },
-];
+import {
+  useRevenueSeriesQuery,
+  useStatusDistributionQuery,
+  useTopProductsQuery,
+} from "../../hooks/useWooQueries";
+import { WooStatePanel } from "../ui/WooStatePanel";
 
 export function AnalyticsSection() {
+  const revenueQuery = useRevenueSeriesQuery();
+  const statusQuery = useStatusDistributionQuery();
+  const topProductsQuery = useTopProductsQuery();
+
+  const loading = revenueQuery.isLoading || statusQuery.isLoading || topProductsQuery.isLoading;
+  const error =
+    (revenueQuery.error as Error | null)?.message ||
+    (statusQuery.error as Error | null)?.message ||
+    (topProductsQuery.error as Error | null)?.message;
+
+  if (loading || error || !revenueQuery.data || !statusQuery.data || !topProductsQuery.data) {
+    return <WooStatePanel loading={loading} error={error} title="analytics" />;
+  }
+
   return (
     <section className="grid gap-4 xl:grid-cols-3">
       <motion.article
@@ -31,22 +44,21 @@ export function AnalyticsSection() {
         className="glass soft-card rounded-3xl p-5 xl:col-span-2"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Revenue & Growth</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Revenue & Orders Trend</h2>
           <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">
-            +14.6% YoY
+            live WooCommerce
           </span>
         </div>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={analyticsSeries}>
+            <LineChart data={revenueQuery.data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="month" stroke="#64748b" />
+              <XAxis dataKey="label" stroke="#64748b" />
               <YAxis stroke="#64748b" />
               <Tooltip />
               <Legend />
               <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={3} />
-              <Line type="monotone" dataKey="profit" stroke="#8b5cf6" strokeWidth={3} />
-              <Line type="monotone" dataKey="sales" stroke="#06b6d4" strokeWidth={3} />
+              <Line type="monotone" dataKey="orders" stroke="#8b5cf6" strokeWidth={3} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -55,30 +67,30 @@ export function AnalyticsSection() {
       <motion.article
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.08 }}
         className="glass soft-card rounded-3xl p-5"
       >
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">Device Analytics</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">Order Status</h2>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={trafficData} dataKey="value" innerRadius={54} outerRadius={88}>
-                {trafficData.map((entry) => (
-                  <Cell key={entry.name} fill={entry.color} />
+              <Pie data={statusQuery.data} dataKey="value" nameKey="name" innerRadius={52} outerRadius={88}>
+                {statusQuery.data.map((entry, index) => (
+                  <Cell
+                    key={entry.name}
+                    fill={["#3b82f6", "#8b5cf6", "#06b6d4", "#10b981", "#f97316", "#f43f5e"][index % 6]}
+                  />
                 ))}
               </Pie>
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="space-y-2">
-          {trafficData.map((device) => (
-            <div key={device.name} className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-600">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: device.color }} />
-                {device.name}
-              </span>
-              <span className="font-medium text-slate-800">{device.value}%</span>
+        <div className="space-y-1.5">
+          {statusQuery.data.map((status) => (
+            <div key={status.name} className="flex justify-between text-sm text-slate-600">
+              <span>{status.name}</span>
+              <span className="font-medium text-slate-800">{status.value}</span>
             </div>
           ))}
         </div>
@@ -87,20 +99,18 @@ export function AnalyticsSection() {
       <motion.article
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
+        transition={{ delay: 0.12 }}
         className="glass soft-card rounded-3xl p-5 xl:col-span-3"
       >
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">Orders vs Users</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">Top Products by Sales</h2>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={analyticsSeries}>
+            <BarChart data={topProductsQuery.data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="month" stroke="#64748b" />
+              <XAxis dataKey="name" stroke="#64748b" />
               <YAxis stroke="#64748b" />
               <Tooltip />
-              <Legend />
               <Bar dataKey="sales" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="users" fill="#a855f7" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

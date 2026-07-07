@@ -1,13 +1,50 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts";
-import { financeSeries, notifications, projects, tasks } from "../../data/mockData";
+import {
+  useAuxiliaryCollectionsQuery,
+  useOrdersQuery,
+  useProductsQuery,
+} from "../../hooks/useWooQueries";
 import { formatCurrency } from "../../lib/utils";
+import { useDashboardStore } from "../../store/useDashboardStore";
+import { WooStatePanel } from "../ui/WooStatePanel";
 
 export function OperationsPanel() {
   const [assistantPrompt, setAssistantPrompt] = useState(
-    "Summarize churn risk by segment and generate retention actions.",
+    "Summarize current order pipeline and recommend actions.",
   );
+
+  const notifications = useDashboardStore((state) => state.notifications);
+  const ordersQuery = useOrdersQuery({ per_page: 12, orderby: "date", order: "desc" });
+  const productsQuery = useProductsQuery({ per_page: 12, orderby: "date", order: "desc" });
+  const auxQuery = useAuxiliaryCollectionsQuery();
+
+  const loading = ordersQuery.isLoading || productsQuery.isLoading || auxQuery.isLoading;
+  const error =
+    (ordersQuery.error as Error | null)?.message ||
+    (productsQuery.error as Error | null)?.message ||
+    (auxQuery.error as Error | null)?.message;
+
+  if (loading || error || !ordersQuery.data || !productsQuery.data || !auxQuery.data) {
+    return <WooStatePanel loading={loading} error={error} title="operations" />;
+  }
+
+  const financeSeries = useMemo(
+    () =>
+      ordersQuery.data.items
+        .slice()
+        .reverse()
+        .map((order) => ({
+          name: new Date(order.date_created).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          income: Number(order.total),
+          expenses: Math.max(0, Number(order.total) * 0.35),
+        })),
+    [ordersQuery.data.items],
+  );
+
+  const categories = auxQuery.data.categories.items.slice(0, 5);
+  const coupons = auxQuery.data.coupons.items.slice(0, 5);
 
   return (
     <section className="grid gap-4 xl:grid-cols-3">
@@ -16,29 +53,22 @@ export function OperationsPanel() {
         animate={{ opacity: 1, y: 0 }}
         className="glass soft-card rounded-3xl p-5"
       >
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">Task Manager</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">Recent Orders</h2>
         <div className="space-y-3">
-          {tasks.map((task) => (
-            <div key={task.id} className="rounded-2xl bg-white/75 p-3">
+          {ordersQuery.data.items.slice(0, 4).map((order) => (
+            <div key={order.id} className="rounded-2xl bg-white/75 p-3">
               <div className="mb-2 flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-slate-800">{task.title}</p>
-                  <p className="text-xs text-slate-500">{task.owner}</p>
+                  <p className="text-sm font-medium text-slate-800">Order #{order.id}</p>
+                  <p className="text-xs text-slate-500">{order.billing.first_name} {order.billing.last_name}</p>
                 </div>
-                <span className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700">
-                  {task.priority}
+                <span className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700 capitalize">
+                  {order.status}
                 </span>
               </div>
-              <div className="mb-1 h-2 overflow-hidden rounded-full bg-slate-200">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${task.progress}%` }}
-                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500"
-                />
-              </div>
               <div className="flex justify-between text-xs text-slate-500">
-                <span>{task.progress}%</span>
-                <span>{task.deadline}</span>
+                <span>{new Date(order.date_created).toLocaleDateString()}</span>
+                <span>{formatCurrency(Number(order.total))}</span>
               </div>
             </div>
           ))}
@@ -51,24 +81,22 @@ export function OperationsPanel() {
         transition={{ delay: 0.08 }}
         className="glass soft-card rounded-3xl p-5"
       >
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">Projects & Budget</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">Top Categories & Coupons</h2>
         <div className="space-y-3">
-          {projects.map((project) => (
-            <div key={project.id} className="rounded-2xl bg-white/75 p-3">
-              <div className="mb-1 flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-800">{project.name}</p>
-                <span className="text-xs text-slate-500">{project.completion}%</span>
+          {categories.map((category) => (
+            <div key={category.id} className="rounded-2xl bg-white/75 p-3 text-sm">
+              <div className="flex justify-between">
+                <p className="font-semibold text-slate-800">{category.name}</p>
+                <span className="text-slate-500">{category.count ?? 0} items</span>
               </div>
-              <p className="mb-2 text-xs text-slate-500">Due {project.dueDate}</p>
-              <div className="mb-2 h-2 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500"
-                  style={{ width: `${project.completion}%` }}
-                />
+            </div>
+          ))}
+          {coupons.map((coupon) => (
+            <div key={coupon.id} className="rounded-2xl bg-white/75 p-3 text-sm">
+              <div className="flex justify-between">
+                <p className="font-semibold text-slate-800">{coupon.code}</p>
+                <span className="text-slate-500">{coupon.amount}</span>
               </div>
-              <p className="text-xs text-slate-600">
-                Spent {formatCurrency(project.spent)} of {formatCurrency(project.budget)}
-              </p>
             </div>
           ))}
         </div>
@@ -82,11 +110,8 @@ export function OperationsPanel() {
       >
         <h2 className="mb-4 text-lg font-semibold text-slate-900">Notifications Center</h2>
         <div className="space-y-3">
-          {notifications.map((notification) => (
-            <div
-              key={notification.id}
-              className="rounded-2xl bg-white/75 p-3 transition hover:bg-white"
-            >
+          {notifications.slice(0, 5).map((notification) => (
+            <div key={notification.id} className="rounded-2xl bg-white/75 p-3 transition hover:bg-white">
               <div className="mb-1 flex items-center justify-between">
                 <p className="text-sm font-medium text-slate-800">{notification.title}</p>
                 {notification.unread && <span className="h-2 w-2 rounded-full bg-blue-500" />}
@@ -104,7 +129,7 @@ export function OperationsPanel() {
         transition={{ delay: 0.16 }}
         className="glass soft-card rounded-3xl p-5 xl:col-span-2"
       >
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">Financial Overview</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">Financial Trend (Recent Orders)</h2>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={financeSeries}>
@@ -138,24 +163,9 @@ export function OperationsPanel() {
           <p className="mt-2 text-sm text-blue-100">“{assistantPrompt}”</p>
         </div>
         <div className="mt-3 space-y-2 text-sm text-slate-600">
-          <button
-            onClick={() => setAssistantPrompt("Forecast revenue by region for next quarter.")}
-            className="w-full rounded-xl bg-white/80 px-3 py-2 text-left"
-          >
-            /forecast revenue next quarter
-          </button>
-          <button
-            onClick={() => setAssistantPrompt("Generate board-ready PDF report with KPI variance.")}
-            className="w-full rounded-xl bg-white/80 px-3 py-2 text-left"
-          >
-            /create board report PDF
-          </button>
-          <button
-            onClick={() => setAssistantPrompt("List highest risk invoices and owners.")}
-            className="w-full rounded-xl bg-white/80 px-3 py-2 text-left"
-          >
-            /show high-risk invoices
-          </button>
+          <button onClick={() => setAssistantPrompt("Summarize top selling products and restock risk.")} className="w-full rounded-xl bg-white/80 px-3 py-2 text-left">/top-products and stock risk</button>
+          <button onClick={() => setAssistantPrompt("Show failed and pending orders from last 7 days.")} className="w-full rounded-xl bg-white/80 px-3 py-2 text-left">/order-status anomaly</button>
+          <button onClick={() => setAssistantPrompt("Estimate revenue trajectory from recent order velocity.")} className="w-full rounded-xl bg-white/80 px-3 py-2 text-left">/revenue trajectory</button>
         </div>
       </motion.article>
     </section>

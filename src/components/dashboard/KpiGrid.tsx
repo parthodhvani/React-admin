@@ -1,33 +1,42 @@
 import { animate, motion, useMotionValue, useTransform } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiArrowDownRight, FiArrowUpRight } from "react-icons/fi";
-import { Area, AreaChart, ResponsiveContainer } from "recharts";
-import { kpiMetrics } from "../../data/mockData";
 import { formatCompact, formatCurrency } from "../../lib/utils";
+import { useDashboardOverviewQuery } from "../../hooks/useWooQueries";
+import { WooStatePanel } from "../ui/WooStatePanel";
 
-function displayMetric(title: string, value: number) {
-  if (title === "Revenue" || title === "Profit") return formatCurrency(value);
-  if (title === "Conversions") return `${value.toFixed(1)}%`;
-  return formatCompact(value);
+interface MetricCard {
+  id: string;
+  title: string;
+  value: number;
+  delta: number;
+  trend: "up" | "down";
+  gradient: string;
+  suffix?: "%";
+  currency?: boolean;
 }
 
-function AnimatedMetricValue({ title, value }: { title: string; value: number }) {
+function AnimatedMetricValue({ value, currency, suffix }: { value: number; currency?: boolean; suffix?: string }) {
   const motionValue = useMotionValue(0);
   const rounded = useTransform(motionValue, (latest) => Math.round(latest));
-  const [display, setDisplay] = useState(displayMetric(title, value));
+  const [display, setDisplay] = useState("0");
 
   useEffect(() => {
-    const controls = animate(motionValue, value, { duration: 1.15, ease: "easeOut" });
+    const controls = animate(motionValue, value, { duration: 1.05, ease: "easeOut" });
     const unsubscribe = rounded.on("change", (latest) => {
-      const numeric = title === "Conversions" ? latest / 10 : latest;
-      setDisplay(displayMetric(title, numeric));
+      const text = currency
+        ? formatCurrency(latest)
+        : suffix
+          ? `${latest.toFixed(0)}${suffix}`
+          : formatCompact(latest);
+      setDisplay(text);
     });
 
     return () => {
       controls.stop();
       unsubscribe();
     };
-  }, [motionValue, rounded, title, value]);
+  }, [currency, motionValue, rounded, suffix, value]);
 
   return <>{display}</>;
 }
@@ -35,6 +44,64 @@ function AnimatedMetricValue({ title, value }: { title: string; value: number })
 export function KpiGrid() {
   const refs = useRef<Record<string, HTMLElement | null>>({});
   const [tilt, setTilt] = useState<Record<string, { x: number; y: number }>>({});
+  const { data, isLoading, error } = useDashboardOverviewQuery();
+
+  if (isLoading || error || !data) {
+    return <WooStatePanel loading={isLoading} error={error instanceof Error ? error.message : undefined} title="dashboard metrics" />;
+  }
+
+  const metrics: MetricCard[] = [
+    {
+      id: "revenue-month",
+      title: "Monthly Revenue",
+      value: data.monthlyRevenue,
+      delta: data.yesterdayRevenue === 0 ? 0 : ((data.todayRevenue - data.yesterdayRevenue) / Math.max(data.yesterdayRevenue, 1)) * 100,
+      trend: data.todayRevenue >= data.yesterdayRevenue ? "up" : "down",
+      gradient: "from-blue-500 to-violet-500",
+      currency: true,
+    },
+    {
+      id: "orders-total",
+      title: "Total Orders",
+      value: data.totalOrders,
+      delta: data.pendingOrders,
+      trend: "up",
+      gradient: "from-emerald-500 to-cyan-500",
+    },
+    {
+      id: "aov",
+      title: "Average Order Value",
+      value: data.averageOrderValue,
+      delta: data.completedOrders === 0 ? 0 : (data.completedOrders / Math.max(data.totalOrders, 1)) * 100,
+      trend: "up",
+      gradient: "from-indigo-500 to-purple-500",
+      currency: true,
+    },
+    {
+      id: "customers",
+      title: "Customers",
+      value: data.totalCustomers,
+      delta: data.totalCoupons,
+      trend: "up",
+      gradient: "from-cyan-500 to-blue-500",
+    },
+    {
+      id: "products",
+      title: "Products",
+      value: data.totalProducts,
+      delta: data.lowStock,
+      trend: data.lowStock > 0 ? "down" : "up",
+      gradient: "from-pink-500 to-orange-500",
+    },
+    {
+      id: "reviews",
+      title: "Reviews",
+      value: data.totalReviews,
+      delta: data.totalCategories,
+      trend: "up",
+      gradient: "from-violet-500 to-fuchsia-500",
+    },
+  ];
 
   const handleMove = (id: string, event: React.MouseEvent<HTMLElement>) => {
     const element = refs.current[id];
@@ -50,24 +117,9 @@ export function KpiGrid() {
     }));
   };
 
-  const handleLeave = (id: string) => {
-    setTilt((state) => ({ ...state, [id]: { x: 0, y: 0 } }));
-  };
-
-  const chartDataMap = useMemo(
-    () =>
-      Object.fromEntries(
-        kpiMetrics.map((metric) => [
-          metric.id,
-          metric.points.map((value, valueIndex) => ({ value, name: valueIndex })),
-        ]),
-      ),
-    [],
-  );
-
   return (
     <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {kpiMetrics.map((metric, index) => {
+      {metrics.map((metric, index) => {
         const currentTilt = tilt[metric.id] ?? { x: 0, y: 0 };
 
         return (
@@ -77,60 +129,23 @@ export function KpiGrid() {
               refs.current[metric.id] = node;
             }}
             onMouseMove={(event) => handleMove(metric.id, event)}
-            onMouseLeave={() => handleLeave(metric.id)}
+            onMouseLeave={() => setTilt((state) => ({ ...state, [metric.id]: { x: 0, y: 0 } }))}
             initial={{ y: 16, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: index * 0.05 }}
-            style={{
-              transformStyle: "preserve-3d",
-              rotateX: currentTilt.x,
-              rotateY: currentTilt.y,
-            }}
+            transition={{ delay: index * 0.04 }}
+            style={{ transformStyle: "preserve-3d", rotateX: currentTilt.x, rotateY: currentTilt.y }}
             className="glass depth-border soft-card hover-lift relative overflow-hidden rounded-3xl p-5"
           >
-            <span className="glow-orb absolute -left-6 top-4 h-20 w-20 bg-blue-300" />
-            <span className="glow-orb absolute -bottom-8 right-2 h-20 w-20 bg-violet-300" />
-
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between">
               <p className="text-sm text-slate-500">{metric.title}</p>
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
-                  metric.trend === "up"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-rose-100 text-rose-700"
-                }`}
-              >
-                {metric.trend === "up" ? <FiArrowUpRight /> : <FiArrowDownRight />} {Math.abs(metric.delta)}%
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${metric.trend === "up" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                {metric.trend === "up" ? <FiArrowUpRight /> : <FiArrowDownRight />} {Math.abs(metric.delta).toFixed(1)}
               </span>
             </div>
-
             <h3 className="text-2xl font-semibold text-slate-900">
-              <AnimatedMetricValue title={metric.title} value={metric.title === "Conversions" ? metric.value * 10 : metric.value} />
+              <AnimatedMetricValue value={metric.value} currency={metric.currency} suffix={metric.suffix} />
             </h3>
-
-            <div className="mt-4 h-16">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartDataMap[metric.id]}>
-                  <defs>
-                    <linearGradient id={metric.id} x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.65} />
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#6366f1"
-                    fill={`url(#${metric.id})`}
-                    strokeWidth={2}
-                    isAnimationActive
-                    animationDuration={1100}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className={`mt-4 h-1.5 rounded-full bg-gradient-to-r ${metric.color}`} />
+            <div className={`mt-4 h-1.5 rounded-full bg-gradient-to-r ${metric.gradient}`} />
           </motion.article>
         );
       })}
