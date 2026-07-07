@@ -1,5 +1,6 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { useMemo } from "react";
 import {
   FiBell,
   FiChevronDown,
@@ -10,12 +11,16 @@ import {
   FiMoon,
   FiPlus,
   FiSearch,
+  FiSun,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../../store/useAuthStore";
 import { useDashboardStore } from "../../store/useDashboardStore";
 
 export function Topbar() {
   const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
+
   const toggleSidebar = useDashboardStore((state) => state.toggleSidebar);
   const search = useDashboardStore((state) => state.search);
   const setSearch = useDashboardStore((state) => state.setSearch);
@@ -25,6 +30,18 @@ export function Topbar() {
   const unreadCount = useDashboardStore(
     (state) => state.notifications.filter((item) => item.unread).length,
   );
+  const theme = useDashboardStore((state) => state.theme);
+  const toggleTheme = useDashboardStore((state) => state.toggleTheme);
+  const userRecords = useDashboardStore((state) => state.userRecords);
+
+  const searchSuggestions = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return [];
+
+    return userRecords
+      .filter((item) => `${item.name} ${item.email} ${item.country}`.toLowerCase().includes(q))
+      .slice(0, 5);
+  }, [search, userRecords]);
 
   return (
     <motion.header
@@ -41,13 +58,37 @@ export function Topbar() {
       </button>
 
       <div className="relative min-w-[220px] flex-1">
-        <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <FiSearch className="pointer-events-none absolute left-3 top-3 text-slate-400" />
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search users, projects, metrics..."
           className="w-full rounded-2xl border border-white/80 bg-white/70 px-10 py-2.5 text-sm text-slate-700 outline-none ring-blue-200 transition focus:ring"
         />
+
+        <AnimatePresence>
+          {searchSuggestions.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              className="glass absolute left-0 right-0 top-11 z-20 rounded-2xl p-2"
+            >
+              {searchSuggestions.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setSearch(item.name);
+                    navigate("/team");
+                  }}
+                  className="block w-full rounded-xl px-2 py-1.5 text-left text-xs text-slate-600 hover:bg-white/80"
+                >
+                  {item.name} <span className="text-slate-400">• {item.country}</span>
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <button
@@ -77,14 +118,17 @@ export function Topbar() {
           <FiMessageCircle />
         </button>
 
-        {[FiMoon, FiGlobe].map((Icon, index) => (
-          <button
-            key={index}
-            className="rounded-2xl bg-white/70 p-2.5 text-slate-600 hover:bg-white"
-          >
-            <Icon />
-          </button>
-        ))}
+        <button
+          onClick={toggleTheme}
+          className="rounded-2xl bg-white/70 p-2.5 text-slate-600 hover:bg-white"
+          aria-label="Toggle theme"
+        >
+          {theme === "light" ? <FiMoon /> : <FiSun />}
+        </button>
+
+        <button className="rounded-2xl bg-white/70 p-2.5 text-slate-600 hover:bg-white">
+          <FiGlobe />
+        </button>
 
         <button
           onClick={openQuickActions}
@@ -118,6 +162,15 @@ export function Topbar() {
                 className="rounded-xl px-3 py-2 text-sm text-slate-700 outline-none hover:bg-white/80"
               >
                 <FiCommand className="mr-2 inline" /> Command Palette
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onClick={() => {
+                  logout();
+                  navigate("/login", { replace: true });
+                }}
+                className="rounded-xl px-3 py-2 text-sm text-rose-600 outline-none hover:bg-rose-50"
+              >
+                Sign out
               </DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>

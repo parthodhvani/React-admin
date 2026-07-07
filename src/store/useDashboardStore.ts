@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { users as seededUsers } from "../data/mockData";
+import type { User } from "../types";
 
 interface Notification {
   id: string;
@@ -14,6 +16,8 @@ interface QuickActionPayload {
   note: string;
 }
 
+type ThemeMode = "light" | "dark";
+
 interface DashboardState {
   sidebarCollapsed: boolean;
   search: string;
@@ -23,6 +27,8 @@ interface DashboardState {
   recentSearches: string[];
   notifications: Notification[];
   lastActionMessage: string;
+  theme: ThemeMode;
+  userRecords: User[];
   toggleSidebar: () => void;
   setSearch: (query: string) => void;
   openCommand: () => void;
@@ -34,8 +40,13 @@ interface DashboardState {
   addRecentSearch: (query: string) => void;
   markNotificationRead: (id: string) => void;
   clearNotification: (id: string) => void;
+  markAllNotificationsRead: () => void;
   submitQuickAction: (payload: QuickActionPayload) => void;
   clearActionMessage: () => void;
+  toggleTheme: () => void;
+  setTheme: (theme: ThemeMode) => void;
+  importUsers: (users: User[]) => void;
+  resetUsers: () => void;
 }
 
 const seedNotifications: Notification[] = [
@@ -62,6 +73,11 @@ const seedNotifications: Notification[] = [
   },
 ];
 
+const storedTheme =
+  typeof window !== "undefined"
+    ? (localStorage.getItem("nova-theme") as ThemeMode | null)
+    : null;
+
 export const useDashboardStore = create<DashboardState>((set) => ({
   sidebarCollapsed: false,
   search: "",
@@ -71,6 +87,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   recentSearches: ["Q2 MRR", "Helios project", "Active enterprise users"],
   notifications: seedNotifications,
   lastActionMessage: "",
+  theme: storedTheme ?? "light",
+  userRecords: seededUsers,
 
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   setSearch: (search) => set({ search }),
@@ -99,11 +117,45 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   clearNotification: (id) =>
     set((state) => ({ notifications: state.notifications.filter((item) => item.id !== id) })),
 
+  markAllNotificationsRead: () =>
+    set((state) => ({
+      notifications: state.notifications.map((item) => ({ ...item, unread: false })),
+    })),
+
   submitQuickAction: (payload) =>
-    set(() => ({
+    set((state) => ({
       quickActionsOpen: false,
       lastActionMessage: `${payload.type.toUpperCase()} created: ${payload.title}`,
+      notifications: [
+        {
+          id: `notif-${Date.now()}`,
+          title: `${payload.type.toUpperCase()} created`,
+          message: `${payload.title}${payload.note ? ` — ${payload.note}` : ""}`,
+          time: "just now",
+          unread: true,
+        },
+        ...state.notifications,
+      ].slice(0, 20),
     })),
 
   clearActionMessage: () => set({ lastActionMessage: "" }),
+
+  toggleTheme: () =>
+    set((state) => {
+      const next = state.theme === "light" ? "dark" : "light";
+      localStorage.setItem("nova-theme", next);
+      return { theme: next };
+    }),
+
+  setTheme: (theme) => {
+    localStorage.setItem("nova-theme", theme);
+    set({ theme });
+  },
+
+  importUsers: (users) => {
+    if (!users.length) return;
+    set({ userRecords: users.slice(0, 500), lastActionMessage: `Imported ${users.length} user records.` });
+  },
+
+  resetUsers: () => set({ userRecords: seededUsers, lastActionMessage: "Reset users to seeded dataset." }),
 }));

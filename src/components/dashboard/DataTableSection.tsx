@@ -8,19 +8,71 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { AnimatePresence, motion } from "framer-motion";
-import { Fragment, useMemo, useState } from "react";
-import { FiDownload, FiUpload } from "react-icons/fi";
-import { users } from "../../data/mockData";
+import { type ChangeEvent, Fragment, useMemo, useRef, useState } from "react";
+import { FiDownload, FiRefreshCw, FiUpload } from "react-icons/fi";
 import { formatCurrency } from "../../lib/utils";
 import { useDashboardStore } from "../../store/useDashboardStore";
 import type { User } from "../../types";
 
+function parseCsvUsers(csvText: string): User[] {
+  const lines = csvText.split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return [];
+
+  const [header, ...rows] = lines;
+  const headers = header.split(",").map((part) => part.trim().toLowerCase());
+
+  return rows
+    .map((line, index) => {
+      const cols = line.split(",").map((part) => part.trim());
+      const entry = Object.fromEntries(headers.map((key, i) => [key, cols[i] ?? ""]));
+
+      return {
+        id: entry.id || `IMP-${index + 1}`,
+        name: entry.name || "Imported User",
+        email: entry.email || `imported${index + 1}@nova.ai`,
+        role: entry.role || "Analyst",
+        country: entry.country || "United States",
+        status: (["Active", "Idle", "Offline"].includes(entry.status)
+          ? entry.status
+          : "Active") as User["status"],
+        orders: Number(entry.orders) || 0,
+        revenue: Number(entry.revenue) || 0,
+        avatar: entry.avatar || `https://i.pravatar.cc/100?img=${(index % 60) + 1}`,
+      } as User;
+    })
+    .filter((item) => item.name && item.email);
+}
+
+function usersToCsv(data: User[]) {
+  const headers = ["id", "name", "email", "role", "country", "status", "orders", "revenue", "avatar"];
+  const rows = data.map((item) =>
+    [
+      item.id,
+      item.name,
+      item.email,
+      item.role,
+      item.country,
+      item.status,
+      String(item.orders),
+      String(item.revenue),
+      item.avatar,
+    ].join(","),
+  );
+
+  return [headers.join(","), ...rows].join("\n");
+}
+
 export function DataTableSection() {
   const globalSearch = useDashboardStore((state) => state.search);
+  const userRecords = useDashboardStore((state) => state.userRecords);
+  const importUsers = useDashboardStore((state) => state.importUsers);
+  const resetUsers = useDashboardStore((state) => state.resetUsers);
+
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [bannerMessage, setBannerMessage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const columns = useMemo<ColumnDef<User>[]>(
     () => [
@@ -81,9 +133,9 @@ export function DataTableSection() {
   );
 
   const filteredUsers = useMemo(() => {
-    if (statusFilter === "All") return users;
-    return users.filter((user) => user.status === statusFilter);
-  }, [statusFilter]);
+    if (statusFilter === "All") return userRecords;
+    return userRecords.filter((user) => user.status === statusFilter);
+  }, [statusFilter, userRecords]);
 
   const table = useReactTable({
     data: filteredUsers,
@@ -103,8 +155,58 @@ export function DataTableSection() {
 
   const selectedCount = Object.values(selectedRows).filter(Boolean).length;
 
+  const onImportClick = () => fileInputRef.current?.click();
+
+  const onFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    let imported: User[] = [];
+
+    if (file.name.endsWith(".json")) {
+      try {
+        const parsed = JSON.parse(text) as User[];
+        imported = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        setBannerMessage("JSON import failed. Check file format.");
+      }
+    } else {
+      imported = parseCsvUsers(text);
+    }
+
+    if (imported.length) {
+      importUsers(imported);
+      setBannerMessage(`Imported ${imported.length} rows.`);
+    } else if (!bannerMessage) {
+      setBannerMessage("No rows imported. Use CSV or JSON user data.");
+    }
+
+    event.target.value = "";
+  };
+
+  const onExport = () => {
+    const csv = usersToCsv(table.getRowModel().rows.map((row) => row.original));
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "enterprise-users.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setBannerMessage(`Exported ${table.getRowModel().rows.length} rows to CSV.`);
+  };
+
   return (
     <section className="glass soft-card rounded-3xl p-5">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,.json"
+        className="hidden"
+        onChange={onFileSelected}
+      />
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold text-slate-900">Enterprise User Directory</h2>
         <div className="flex items-center gap-2">
@@ -119,16 +221,19 @@ export function DataTableSection() {
             <option>Offline</option>
           </select>
           <button
-            onClick={() => setBannerMessage("Import simulated successfully.")}
+            onClick={onImportClick}
             className="rounded-xl bg-white/80 px-3 py-2 text-sm text-slate-700"
           >
             <FiUpload className="mr-2 inline" /> Import
           </button>
+          <button onClick={onExport} className="rounded-xl bg-white/80 px-3 py-2 text-sm text-slate-700">
+            <FiDownload className="mr-2 inline" /> Export
+          </button>
           <button
-            onClick={() => setBannerMessage(`Exported ${table.getRowModel().rows.length} rows.`)}
+            onClick={resetUsers}
             className="rounded-xl bg-white/80 px-3 py-2 text-sm text-slate-700"
           >
-            <FiDownload className="mr-2 inline" /> Export
+            <FiRefreshCw className="mr-2 inline" /> Reset
           </button>
         </div>
       </div>
@@ -167,10 +272,7 @@ export function DataTableSection() {
           <tbody>
             {table.getRowModel().rows.map((row) => (
               <Fragment key={row.id}>
-                <motion.tr
-                  layout
-                  className="rounded-2xl bg-white/75 transition hover:bg-white"
-                >
+                <motion.tr layout className="rounded-2xl bg-white/75 transition hover:bg-white">
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-3 py-3 text-slate-700">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

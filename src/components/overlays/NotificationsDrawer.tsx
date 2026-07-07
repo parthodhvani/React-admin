@@ -9,6 +9,7 @@ export function NotificationsDrawer() {
   const close = useDashboardStore((state) => state.closeNotifications);
   const notifications = useDashboardStore((state) => state.notifications);
   const markRead = useDashboardStore((state) => state.markNotificationRead);
+  const markAllRead = useDashboardStore((state) => state.markAllNotificationsRead);
   const clear = useDashboardStore((state) => state.clearNotification);
 
   const [query, setQuery] = useState("");
@@ -46,12 +47,20 @@ export function NotificationsDrawer() {
               >
                 <header className="mb-3 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-slate-900">Notifications</h2>
-                  <button
-                    onClick={close}
-                    className="rounded-xl bg-white/70 p-2 text-slate-600 transition hover:bg-white"
-                  >
-                    <FiX />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={markAllRead}
+                      className="rounded-xl bg-white/70 px-2 py-1 text-xs text-slate-600 transition hover:bg-white"
+                    >
+                      Mark all read
+                    </button>
+                    <button
+                      onClick={close}
+                      className="rounded-xl bg-white/70 p-2 text-slate-600 transition hover:bg-white"
+                    >
+                      <FiX />
+                    </button>
+                  </div>
                 </header>
 
                 <label className="mb-3 flex items-center gap-2 rounded-xl bg-white/70 px-3 py-2 text-slate-500">
