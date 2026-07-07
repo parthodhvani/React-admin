@@ -11,12 +11,20 @@ import {
   FiPlus,
   FiSearch,
 } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 import { useDashboardStore } from "../../store/useDashboardStore";
 
 export function Topbar() {
+  const navigate = useNavigate();
   const toggleSidebar = useDashboardStore((state) => state.toggleSidebar);
   const search = useDashboardStore((state) => state.search);
   const setSearch = useDashboardStore((state) => state.setSearch);
+  const openCommand = useDashboardStore((state) => state.openCommand);
+  const openQuickActions = useDashboardStore((state) => state.openQuickActions);
+  const openNotifications = useDashboardStore((state) => state.openNotifications);
+  const unreadCount = useDashboardStore(
+    (state) => state.notifications.filter((item) => item.unread).length,
+  );
 
   return (
     <motion.header
@@ -42,8 +50,34 @@ export function Topbar() {
         />
       </div>
 
+      <button
+        onClick={openCommand}
+        className="rounded-xl bg-white/75 px-2.5 py-2 text-xs text-slate-500 hover:bg-white"
+      >
+        Ctrl/⌘ K
+      </button>
+
       <div className="ml-auto flex items-center gap-2">
-        {[FiBell, FiMessageCircle, FiMoon, FiGlobe].map((Icon, index) => (
+        <button
+          onClick={openNotifications}
+          className="relative rounded-2xl bg-white/70 p-2.5 text-slate-600 hover:bg-white"
+        >
+          <FiBell />
+          {unreadCount > 0 && (
+            <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold text-white">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => navigate("/team")}
+          className="rounded-2xl bg-white/70 p-2.5 text-slate-600 hover:bg-white"
+        >
+          <FiMessageCircle />
+        </button>
+
+        {[FiMoon, FiGlobe].map((Icon, index) => (
           <button
             key={index}
             className="rounded-2xl bg-white/70 p-2.5 text-slate-600 hover:bg-white"
@@ -52,7 +86,10 @@ export function Topbar() {
           </button>
         ))}
 
-        <button className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg">
+        <button
+          onClick={openQuickActions}
+          className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg"
+        >
           <FiPlus /> Quick Action
         </button>
 
@@ -63,15 +100,24 @@ export function Topbar() {
             <FiChevronDown className="text-slate-500" />
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
-            <DropdownMenu.Content className="glass soft-card z-30 mt-2 min-w-[180px] rounded-2xl p-2">
-              <DropdownMenu.Item className="rounded-xl px-3 py-2 text-sm text-slate-700 outline-none hover:bg-white/80">
-                Profile
+            <DropdownMenu.Content className="glass soft-card z-30 mt-2 min-w-[200px] rounded-2xl p-2">
+              <DropdownMenu.Item
+                onClick={() => navigate("/settings")}
+                className="rounded-xl px-3 py-2 text-sm text-slate-700 outline-none hover:bg-white/80"
+              >
+                Profile & Security
               </DropdownMenu.Item>
-              <DropdownMenu.Item className="rounded-xl px-3 py-2 text-sm text-slate-700 outline-none hover:bg-white/80">
-                Preferences
+              <DropdownMenu.Item
+                onClick={openQuickActions}
+                className="rounded-xl px-3 py-2 text-sm text-slate-700 outline-none hover:bg-white/80"
+              >
+                Quick Actions
               </DropdownMenu.Item>
-              <DropdownMenu.Item className="rounded-xl px-3 py-2 text-sm text-slate-700 outline-none hover:bg-white/80">
-                <FiCommand className="mr-2 inline" /> Keyboard shortcuts
+              <DropdownMenu.Item
+                onClick={openCommand}
+                className="rounded-xl px-3 py-2 text-sm text-slate-700 outline-none hover:bg-white/80"
+              >
+                <FiCommand className="mr-2 inline" /> Command Palette
               </DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
