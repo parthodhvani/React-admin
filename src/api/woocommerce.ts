@@ -2,7 +2,7 @@ import axios, { AxiosError, type AxiosInstance } from "axios";
 import { wooEnv } from "../config/env";
 import type { WcPaginatedResponse } from "../types/woocommerce";
 
-const DEFAULT_TIMEOUT = 15000;
+const DEFAULT_TIMEOUT = wooEnv.timeoutMs;
 const DEFAULT_RETRIES = 2;
 
 export class WooApiError extends Error {
@@ -32,8 +32,15 @@ const createWooClient = (): AxiosInstance => {
   instance.interceptors.response.use(
     (response) => response,
     (error: AxiosError<{ message?: string }>) => {
+      const timeoutMessage =
+        error.code === "ECONNABORTED"
+          ? `Request timed out after ${DEFAULT_TIMEOUT}ms. Check WooCommerce URL/network reachability or increase VITE_WC_TIMEOUT_MS.`
+          : undefined;
       const message =
-        error.response?.data?.message || error.message || "Unknown WooCommerce API error";
+        timeoutMessage ||
+        error.response?.data?.message ||
+        error.message ||
+        "Unknown WooCommerce API error";
       throw new WooApiError(message, error.response?.status);
     },
   );
