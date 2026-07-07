@@ -33,10 +33,10 @@ function AnimatedMetricValue({ title, value }: { title: string; value: number })
 }
 
 export function KpiGrid() {
-  const refs = useRef<Record<string, HTMLDivElement | null>>({});
+  const refs = useRef<Record<string, HTMLElement | null>>({});
   const [tilt, setTilt] = useState<Record<string, { x: number; y: number }>>({});
 
-  const handleMove = (id: string, event: React.MouseEvent<HTMLDivElement>) => {
+  const handleMove = (id: string, event: React.MouseEvent<HTMLElement>) => {
     const element = refs.current[id];
     if (!element) return;
 
