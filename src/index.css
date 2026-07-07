@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.16), transparent 40%),
+    radial-gradient(circle at 90% 0%, rgba(168, 85, 247, 0.2), transparent 35%),
+    radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.13), transparent 35%),
+    #f8fafc;
+  color: #0f172a;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.glass {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.55));
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    0 12px 40px rgba(71, 85, 105, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.soft-card {
+  border-radius: 22px;
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #2563eb, #7c3aed, #06b6d4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hover-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 34px rgba(30, 41, 59, 0.14);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 999px;
+}
