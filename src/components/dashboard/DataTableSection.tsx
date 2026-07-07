@@ -7,7 +7,8 @@ import {
   type ColumnDef,
   useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Fragment, useMemo, useState } from "react";
 import { FiDownload, FiUpload } from "react-icons/fi";
 import { users } from "../../data/mockData";
 import { formatCurrency } from "../../lib/utils";
@@ -17,9 +18,26 @@ import type { User } from "../../types";
 export function DataTableSection() {
   const globalSearch = useDashboardStore((state) => state.search);
   const [statusFilter, setStatusFilter] = useState("All");
+  const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [bannerMessage, setBannerMessage] = useState("");
 
   const columns = useMemo<ColumnDef<User>[]>(
     () => [
+      {
+        id: "select",
+        header: "",
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            checked={Boolean(selectedRows[row.original.id])}
+            onChange={(event) =>
+              setSelectedRows((state) => ({ ...state, [row.original.id]: event.target.checked }))
+            }
+            aria-label={`Select ${row.original.name}`}
+          />
+        ),
+      },
       {
         accessorKey: "name",
         header: "User",
@@ -59,7 +77,7 @@ export function DataTableSection() {
         ),
       },
     ],
-    [],
+    [selectedRows],
   );
 
   const filteredUsers = useMemo(() => {
@@ -83,6 +101,8 @@ export function DataTableSection() {
     },
   });
 
+  const selectedCount = Object.values(selectedRows).filter(Boolean).length;
+
   return (
     <section className="glass soft-card rounded-3xl p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -98,14 +118,33 @@ export function DataTableSection() {
             <option>Idle</option>
             <option>Offline</option>
           </select>
-          <button className="rounded-xl bg-white/80 px-3 py-2 text-sm text-slate-700">
+          <button
+            onClick={() => setBannerMessage("Import simulated successfully.")}
+            className="rounded-xl bg-white/80 px-3 py-2 text-sm text-slate-700"
+          >
             <FiUpload className="mr-2 inline" /> Import
           </button>
-          <button className="rounded-xl bg-white/80 px-3 py-2 text-sm text-slate-700">
+          <button
+            onClick={() => setBannerMessage(`Exported ${table.getRowModel().rows.length} rows.`)}
+            className="rounded-xl bg-white/80 px-3 py-2 text-sm text-slate-700"
+          >
             <FiDownload className="mr-2 inline" /> Export
           </button>
         </div>
       </div>
+
+      {bannerMessage && (
+        <div className="mb-3 flex items-center justify-between rounded-xl bg-blue-50 px-3 py-2 text-sm text-blue-700">
+          {bannerMessage}
+          <button onClick={() => setBannerMessage("")}>Dismiss</button>
+        </div>
+      )}
+
+      {selectedCount > 0 && (
+        <div className="mb-3 rounded-xl bg-violet-50 px-3 py-2 text-sm text-violet-700">
+          {selectedCount} row(s) selected.
+        </div>
+      )}
 
       <div className="scrollbar-thin overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-y-2 text-left text-sm">
@@ -121,18 +160,54 @@ export function DataTableSection() {
                     {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
+                <th className="px-3 py-2 text-xs uppercase tracking-wider text-slate-500">Actions</th>
               </tr>
             ))}
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="rounded-2xl bg-white/75">
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-3 py-3 text-slate-700">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              <Fragment key={row.id}>
+                <motion.tr
+                  layout
+                  className="rounded-2xl bg-white/75 transition hover:bg-white"
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="px-3 py-3 text-slate-700">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                  <td className="px-3 py-3">
+                    <button
+                      onClick={() =>
+                        setExpandedRow((state) => (state === row.original.id ? null : row.original.id))
+                      }
+                      className="rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-600"
+                    >
+                      {expandedRow === row.original.id ? "Hide" : "Details"}
+                    </button>
                   </td>
-                ))}
-              </tr>
+                </motion.tr>
+
+                <AnimatePresence>
+                  {expandedRow === row.original.id && (
+                    <motion.tr
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <td colSpan={8} className="px-4 pb-3">
+                        <div className="rounded-2xl bg-white/70 p-3 text-xs text-slate-600">
+                          <p>
+                            <span className="font-semibold text-slate-800">Profile summary:</span> {row.original.name}
+                            {" "}has {row.original.orders} orders and generated {formatCurrency(row.original.revenue)}.
+                          </p>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  )}
+                </AnimatePresence>
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -144,14 +219,14 @@ export function DataTableSection() {
         </span>
         <div className="flex items-center gap-2">
           <button
-            className="rounded-xl bg-white/80 px-3 py-1.5"
+            className="rounded-xl bg-white/80 px-3 py-1.5 disabled:opacity-40"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
             Prev
           </button>
           <button
-            className="rounded-xl bg-white/80 px-3 py-1.5"
+            className="rounded-xl bg-white/80 px-3 py-1.5 disabled:opacity-40"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >

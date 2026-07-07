@@ -1,9 +1,14 @@
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts";
 import { financeSeries, notifications, projects, tasks } from "../../data/mockData";
 import { formatCurrency } from "../../lib/utils";
 
 export function OperationsPanel() {
+  const [assistantPrompt, setAssistantPrompt] = useState(
+    "Summarize churn risk by segment and generate retention actions.",
+  );
+
   return (
     <section className="grid gap-4 xl:grid-cols-3">
       <motion.article
@@ -130,14 +135,27 @@ export function OperationsPanel() {
         <h2 className="mb-4 text-lg font-semibold text-slate-900">AI Assistant</h2>
         <div className="rounded-2xl bg-gradient-to-br from-blue-500 to-violet-500 p-4 text-white">
           <p className="text-sm">Ask Nova AI</p>
-          <p className="mt-2 text-sm text-blue-100">
-            “Summarize churn risk by segment and generate retention actions.”
-          </p>
+          <p className="mt-2 text-sm text-blue-100">“{assistantPrompt}”</p>
         </div>
         <div className="mt-3 space-y-2 text-sm text-slate-600">
-          <button className="w-full rounded-xl bg-white/80 px-3 py-2 text-left">/forecast revenue next quarter</button>
-          <button className="w-full rounded-xl bg-white/80 px-3 py-2 text-left">/create board report PDF</button>
-          <button className="w-full rounded-xl bg-white/80 px-3 py-2 text-left">/show high-risk invoices</button>
+          <button
+            onClick={() => setAssistantPrompt("Forecast revenue by region for next quarter.")}
+            className="w-full rounded-xl bg-white/80 px-3 py-2 text-left"
+          >
+            /forecast revenue next quarter
+          </button>
+          <button
+            onClick={() => setAssistantPrompt("Generate board-ready PDF report with KPI variance.")}
+            className="w-full rounded-xl bg-white/80 px-3 py-2 text-left"
+          >
+            /create board report PDF
+          </button>
+          <button
+            onClick={() => setAssistantPrompt("List highest risk invoices and owners.")}
+            className="w-full rounded-xl bg-white/80 px-3 py-2 text-left"
+          >
+            /show high-risk invoices
+          </button>
         </div>
       </motion.article>
     </section>
