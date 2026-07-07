@@ -26,13 +26,9 @@ export function OperationsPanel() {
     (productsQuery.error as Error | null)?.message ||
     (auxQuery.error as Error | null)?.message;
 
-  if (loading || error || !ordersQuery.data || !productsQuery.data || !auxQuery.data) {
-    return <WooStatePanel loading={loading} error={error} title="operations" />;
-  }
-
   const financeSeries = useMemo(
     () =>
-      ordersQuery.data.items
+      (ordersQuery.data?.items ?? [])
         .slice()
         .reverse()
         .map((order) => ({
@@ -40,8 +36,12 @@ export function OperationsPanel() {
           income: Number(order.total),
           expenses: Math.max(0, Number(order.total) * 0.35),
         })),
-    [ordersQuery.data.items],
+    [ordersQuery.data?.items],
   );
+
+  if (loading || error || !ordersQuery.data || !productsQuery.data || !auxQuery.data) {
+    return <WooStatePanel loading={loading} error={error} title="operations" />;
+  }
 
   const categories = auxQuery.data.categories.items.slice(0, 5);
   const coupons = auxQuery.data.coupons.items.slice(0, 5);

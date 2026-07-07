@@ -10,6 +10,20 @@ export function CustomersTable() {
   const customersQuery = useCustomersQuery({ page, per_page: 15, search: search || undefined });
   const ordersQuery = useOrdersQuery({ per_page: 100 });
 
+  const metrics = useMemo(() => {
+    const map = new Map<number, { orders: number; spend: number; last: string | null }>();
+
+    for (const order of ordersQuery.data?.items ?? []) {
+      const current = map.get(order.customer_id) ?? { orders: 0, spend: 0, last: null };
+      current.orders += 1;
+      current.spend += Number(order.total);
+      current.last = current.last ? (new Date(current.last) > new Date(order.date_created) ? current.last : order.date_created) : order.date_created;
+      map.set(order.customer_id, current);
+    }
+
+    return map;
+  }, [ordersQuery.data?.items]);
+
   if (customersQuery.isLoading || ordersQuery.isLoading || customersQuery.error || ordersQuery.error || !customersQuery.data || !ordersQuery.data) {
     return (
       <WooStatePanel
@@ -19,20 +33,6 @@ export function CustomersTable() {
       />
     );
   }
-
-  const metrics = useMemo(() => {
-    const map = new Map<number, { orders: number; spend: number; last: string | null }>();
-
-    for (const order of ordersQuery.data.items) {
-      const current = map.get(order.customer_id) ?? { orders: 0, spend: 0, last: null };
-      current.orders += 1;
-      current.spend += Number(order.total);
-      current.last = current.last ? (new Date(current.last) > new Date(order.date_created) ? current.last : order.date_created) : order.date_created;
-      map.set(order.customer_id, current);
-    }
-
-    return map;
-  }, [ordersQuery.data.items]);
 
   return (
     <section className="glass soft-card rounded-3xl p-5">

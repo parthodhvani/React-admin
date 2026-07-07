@@ -2,6 +2,7 @@ import { getWooCollection } from "../api/woocommerce";
 import type { WcOrder, WcPaginatedResponse } from "../types/woocommerce";
 
 export interface OrderQuery {
+  [key: string]: string | number | boolean | undefined;
   page?: number;
   per_page?: number;
   search?: string;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useOrdersQuery } from "../../hooks/useWooQueries";
 import { formatCurrency } from "../../lib/utils";
 import { WooStatePanel } from "../ui/WooStatePanel";
@@ -41,10 +41,7 @@ export function OrdersTable() {
     URL.revokeObjectURL(url);
   };
 
-  const statusOptions = useMemo(() => {
-    const set = new Set(rows.map((order) => order.status));
-    return [...set];
-  }, [rows]);
+  const statusOptions = [...new Set(rows.map((order) => order.status))];
 
   if (query.isLoading || query.error || !query.data) {
     return <WooStatePanel loading={query.isLoading} error={query.error instanceof Error ? query.error.message : undefined} title="orders" />;

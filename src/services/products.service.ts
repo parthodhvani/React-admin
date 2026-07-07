@@ -2,6 +2,7 @@ import { getWooCollection } from "../api/woocommerce";
 import type { WcPaginatedResponse, WcProduct, WcVariation } from "../types/woocommerce";
 
 export interface ProductQuery {
+  [key: string]: string | number | boolean | undefined;
   page?: number;
   per_page?: number;
   search?: string;
