@@ -12,6 +12,7 @@ import {
 } from "react-icons/fi";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../../lib/utils";
+import { useAuthStore } from "../../store/useAuthStore";
 import { useDashboardStore } from "../../store/useDashboardStore";
 
 const navItems = [
@@ -27,6 +28,7 @@ const pinned = ["Helios Revenue", "Q3 GTM Plan", "Enterprise Team Ops"];
 
 export function Sidebar() {
   const collapsed = useDashboardStore((state) => state.sidebarCollapsed);
+  const logout = useAuthStore((state) => state.logout);
   const location = useLocation();
 
   return (
@@ -115,7 +117,10 @@ export function Sidebar() {
                 <p className="text-sm font-semibold text-slate-800">Sophia Lin</p>
                 <p className="text-xs text-slate-500">Chief Product Officer</p>
               </div>
-              <button className="ml-auto rounded-xl p-2 text-slate-500 hover:bg-white/80">
+              <button
+                onClick={logout}
+                className="ml-auto rounded-xl p-2 text-slate-500 hover:bg-white/80"
+              >
                 <FiLogOut />
               </button>
             </>

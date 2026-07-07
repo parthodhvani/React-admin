@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { FiArrowUpRight, FiCommand, FiFileText, FiSearch, FiZap } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { users } from "../../data/mockData";
 import { useDashboardStore } from "../../store/useDashboardStore";
 
 type CommandItem = {
@@ -21,6 +20,8 @@ export function CommandPalette() {
   const addRecent = useDashboardStore((state) => state.addRecentSearch);
   const recentSearches = useDashboardStore((state) => state.recentSearches);
   const openQuickActions = useDashboardStore((state) => state.openQuickActions);
+  const openNotifications = useDashboardStore((state) => state.openNotifications);
+  const userRecords = useDashboardStore((state) => state.userRecords);
   const [query, setQuery] = useState("");
 
   const commands = useMemo<CommandItem[]>(
@@ -53,7 +54,14 @@ export function CommandPalette() {
         category: "Quick Action",
         action: () => openQuickActions(),
       },
-      ...users.slice(0, 12).map((user) => ({
+      {
+        id: "action-notifications",
+        label: "Open Notifications",
+        subtitle: "Review unread activity and alerts",
+        category: "Quick Action",
+        action: () => openNotifications(),
+      },
+      ...userRecords.slice(0, 12).map((user) => ({
         id: `user-${user.id}`,
         label: user.name,
         subtitle: `${user.role} • ${user.country}`,
@@ -63,7 +71,7 @@ export function CommandPalette() {
         },
       })),
     ],
-    [navigate, openQuickActions],
+    [navigate, openNotifications, openQuickActions, userRecords],
   );
 
   const results = useMemo(() => {
